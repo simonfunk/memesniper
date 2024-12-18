@@ -1,0 +1,12 @@
+# Ethereum/BSC
+web3==6.11.1
+eth-account==0.8.0
+
+# Solana
+solana==0.30.2
+solders==0.18.1
+anchorpy==0.18.0
+
+# General
+requests==2.31.0
+python-dotenv==1.0.0 
