@@ -23,6 +23,14 @@ class RaydiumAPI:
     def _fetch_token_metadata(self):
         """Fetch token metadata from Raydium"""
         try:
+            # Add well-known tokens
+            well_known = {
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {"symbol": "USDC", "name": "USD Coin", "decimals": 6},
+                "So11111111111111111111111111111111111111112": {"symbol": "SOL", "name": "Wrapped SOL", "decimals": 9},
+            }
+            self.token_metadata.update(well_known)
+            
+            # Fetch from API
             response = self.session.get(self.token_url)
             if response.ok:
                 data = response.json()

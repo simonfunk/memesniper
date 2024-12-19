@@ -22,23 +22,25 @@ class TokenMonitor:
     def __init__(self):
         self.dex = initialize_dex()
         
-    def list_pools(self, hours, unit='hours'):
+    def list_pools(self, time_value, unit='hours'):
         """List all pools created in the last X time units"""
         print("\n==================================================")
         print("🔍 Recent Solana Pools")
         print("==================================================\n")
         
-        # Convert time to hours
+        # Convert everything to hours for timedelta
+        hours = float(time_value)  # Start with the original value
         if unit == 'days':
-            hours = hours * 24
+            hours = time_value * 24
         elif unit == 'minutes':
-            hours = hours / 60
+            hours = time_value / 60
         
         # Calculate time window
         now = datetime.now(timezone.utc)
-        cutoff_time = now - timedelta(hours=float(hours))
+        cutoff_time = now - timedelta(hours=hours)
         
-        print(f"📅 Showing pools created in last {hours} {unit}")
+        # Print time window with original units
+        print(f"📅 Showing pools created in last {time_value} {unit}")
         print(f"From: {cutoff_time.strftime('%Y-%m-%d %H:%M:%S')} UTC")
         print(f"To:   {now.strftime('%Y-%m-%d %H:%M:%S')} UTC\n")
         
@@ -46,9 +48,15 @@ class TokenMonitor:
         self.dex.cutoff_time = cutoff_time
         pools = self.dex.get_pools()
         
-        if pools:
-            print(f"\nFound {len(pools)} recent pools\n")
-            for pool in pools:
+        # Filter pools by creation time
+        recent_pools = [
+            pool for pool in pools
+            if pool['created_at'] >= cutoff_time
+        ]
+        
+        if recent_pools:
+            print(f"\nFound {len(recent_pools)} recent pools\n")
+            for pool in recent_pools:
                 self._print_pool_info(pool)
                 self._check_pool_liquidity(pool)
                 print("----------------------------------------\n")
