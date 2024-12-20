@@ -116,8 +116,6 @@ class RaydiumAPI:
             }
             
             response = self.session.get(url, params=params, headers=headers)
-            print(f"Response status: {response.status_code}")
-            print(f"Response content: {response.text[:200]}...")
             
             if response.ok:
                 data = response.json()
