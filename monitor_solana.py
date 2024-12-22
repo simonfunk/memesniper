@@ -146,8 +146,8 @@ class TokenMonitor:
             )
             
             message = (
-                "════════════════\n\n"
-                "NEW POOL ═══════\n\n"
+                "════════════════\n"
+                "NEW POOL ═══════\n"
                 "════════════════\n\n"
                 f"🏊 Pool: {pool['id']}\n"
                 f"💱 Type: {pool['type']}\n"
@@ -156,10 +156,10 @@ class TokenMonitor:
                 f"📊 24h Volume: ${pool['volume_24h']:,.2f}\n"
                 f"💰 Fee Rate: {pool['fee_rate']*100:.2f}%\n"
                 f"💲 Price: ${pool['price']:.8f}\n\n"
-                "Tokens ──────────\n"
+                "Tokens ──────────\n\n"
                 f"• {pool['tokenA_symbol']}: {pool['tokenA']}\n"
                 f"• {pool['tokenB_symbol']}: {pool['tokenB']}\n\n"
-                "Links ───────────\n"
+                "Links ───────────\n\n"
                 f"• <a href='{pool['url']}'>Raydium</a>\n"
                 f"• <a href='{dexscreener_url}'>DexScreener</a>\n"
                 f"• <a href='{geckoterminal_url}'>GeckoTerminal</a>\n"
