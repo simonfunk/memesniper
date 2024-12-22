@@ -1,6 +1,16 @@
 import argparse
 from datetime import datetime, timezone, timedelta
 from memesniper import initialize_dex
+import time
+from config import (
+    MIN_TVL, 
+    MIN_TVL_LOW_VOLUME, 
+    MIN_VOLUME_24H, 
+    TEST_LIQUIDITY_AMOUNT, 
+    SLIPPAGE_BPS,
+    TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_NOTIFICATIONS
+)
+import requests
 
 def main():
     parser = argparse.ArgumentParser(description='Monitor Solana tokens and pools')
@@ -19,11 +29,33 @@ def main():
         monitor.monitor_pools(args.time, args.unit, args.interval)
 
 class TokenMonitor:
-    def __init__(self):
+    def __init__(self, config=None):
+        # Default configuration from config.py
+        self.config = {
+            'min_tvl': MIN_TVL,              
+            'min_tvl_low_volume': MIN_TVL_LOW_VOLUME,  
+            'min_volume_24h': MIN_VOLUME_24H,          
+            'test_liquidity_amount': TEST_LIQUIDITY_AMOUNT,  
+            'slippage_bps': SLIPPAGE_BPS,           
+        }
+        # Update with user config if provided
+        if config:
+            self.config.update(config)
         self.dex = initialize_dex()
+        self.telegram_enabled = TELEGRAM_NOTIFICATIONS
+        if self.telegram_enabled:
+            self.telegram_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+            self.telegram_chat_id = TELEGRAM_CHAT_ID
         
-    def list_pools(self, time_value, unit='hours'):
+    def list_pools(self, time_value, unit='hours', config=None):
         """List all pools created in the last X time units"""
+        # Allow temporary config override for this call
+        if config:
+            temp_config = self.config.copy()
+            temp_config.update(config)
+        else:
+            temp_config = self.config
+        
         print("\n==================================================")
         print("🔍 Recent Solana Pools")
         print("==================================================\n")
@@ -101,6 +133,90 @@ class TokenMonitor:
                 print(f"Metadata retrieved: {metadata}\n")
         else:
             print("❌ No liquidity")
+    
+    def send_telegram_notification(self, pool):
+        """Send pool information to Telegram"""
+        try:
+            message = (
+                "🆕 New Pool Detected!\n\n"
+                f"🏊 Pool: {pool['id']}\n"
+                f"💱 Type: {pool['type']}\n"
+                f"🪙 Pair: {pool['tokenA_symbol']}/{pool['tokenB_symbol']}\n"
+                f"💧 Liquidity: ${pool['liquidity']:,.2f}\n"
+                f"📊 24h Volume: ${pool['volume_24h']:,.2f}\n"
+                f"💰 Fee Rate: {pool['fee_rate']*100:.2f}%\n"
+                f"💲 Price: ${pool['price']:.8f}\n\n"
+                f"🔍 Token Addresses:\n"
+                f"• {pool['tokenA_symbol']}: {pool['tokenA']}\n"
+                f"• {pool['tokenB_symbol']}: {pool['tokenB']}\n\n"
+                f"🌐 Pool URL: {pool['url']}"
+            )
+
+            payload = {
+                'chat_id': self.telegram_chat_id,
+                'text': message,
+                'parse_mode': 'HTML'
+            }
+
+            response = requests.post(self.telegram_url, json=payload)
+            if not response.ok:
+                print(f"Failed to send Telegram notification: {response.text}")
+
+        except Exception as e:
+            print(f"Error sending Telegram notification: {e}")
+
+    def monitor_pools(self, time_value, unit='hours', interval=60, config=None):
+        """Continuously monitor for new pools"""
+        # Allow temporary config override for this call
+        if config:
+            temp_config = self.config.copy()
+            temp_config.update(config)
+        else:
+            temp_config = self.config
+        
+        print("\n==================================================")
+        print("🔍 Monitoring Solana Pools")
+        print("==================================================\n")
+        
+        # Convert everything to hours for timedelta
+        hours = float(time_value)
+        if unit == 'days':
+            hours = time_value * 24
+        elif unit == 'minutes':
+            hours = time_value / 60
+            
+        print(f"📅 Monitoring pools created in last {time_value} {unit}")
+        print(f"⏰ Checking every {interval} seconds\n")
+        
+        seen_pools = set()
+        
+        while True:
+            try:
+                now = datetime.now(timezone.utc)
+                cutoff_time = now - timedelta(hours=hours)
+                self.dex.cutoff_time = cutoff_time
+                
+                pools = self.dex.get_pools()
+                
+                # Filter and check for new pools
+                for pool in pools:
+                    if pool['id'] not in seen_pools and pool['created_at'] >= cutoff_time:
+                        print("\n🆕 New pool detected!")
+                        self._print_pool_info(pool)
+                        self._check_pool_liquidity(pool)
+                        # Send Telegram notification
+                        self.send_telegram_notification(pool)
+                        print("----------------------------------------\n")
+                        seen_pools.add(pool['id'])
+                
+                time.sleep(interval)
+                
+            except KeyboardInterrupt:
+                print("\n✋ Monitoring stopped")
+                break
+            except Exception as e:
+                print(f"Error during monitoring: {e}")
+                time.sleep(interval)
 
 if __name__ == '__main__':
     main() 

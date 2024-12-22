@@ -95,8 +95,14 @@ class RaydiumAPI:
             print(f"Error updating SOL price: {e}")
             return 0
     
-    def check_liquidity(self, token_address):
+    def check_liquidity(self, token_address, config=None):
         """Check if token has liquidity on Jupiter"""
+        if config is None:
+            config = {
+                'test_liquidity_amount': 1000000,  # 0.001 SOL
+                'slippage_bps': 50
+            }
+
         try:
             # Skip if token is SOL
             if token_address == "So11111111111111111111111111111111111111112":
@@ -106,8 +112,8 @@ class RaydiumAPI:
             params = {
                 "inputMint": "So11111111111111111111111111111111111111112",  # SOL
                 "outputMint": token_address,
-                "amount": 1000000,  # 0.001 SOL
-                "slippageBps": 50
+                "amount": config['test_liquidity_amount'],
+                "slippageBps": config['slippage_bps']
             }
             
             headers = {
@@ -132,8 +138,15 @@ class RaydiumAPI:
             print(f"Error checking liquidity: {e}")
             return False
     
-    def get_pools(self):
+    def get_pools(self, config=None):
         """Get all Raydium pools (both CL and CP)"""
+        if config is None:
+            config = {
+                'min_tvl': 1000,
+                'min_tvl_low_volume': 10000,
+                'min_volume_24h': 1,
+            }
+
         pools = []
         now = datetime.now(timezone.utc)
         
@@ -194,8 +207,9 @@ class RaydiumAPI:
                         tvl = float(pool.get('tvl', 0))
                         volume_24h = float(pool.get('day', {}).get('volume', 0))
                         
-                        # Skip low quality pools
-                        if tvl < 1000 or (volume_24h < 1 and tvl < 10000):
+                        # Use configurable values for filtering
+                        if tvl < config['min_tvl'] or (volume_24h < config['min_volume_24h'] 
+                            and tvl < config['min_tvl_low_volume']):
                             continue
                         
                         mint_a = str(pool['mintA'])
