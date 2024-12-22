@@ -137,8 +137,18 @@ class TokenMonitor:
     def send_telegram_notification(self, pool):
         """Send pool information to Telegram"""
         try:
+            # Create URLs for different platforms
+            dexscreener_url = f"https://dexscreener.com/solana/{pool['id']}"
+            geckoterminal_url = f"https://www.geckoterminal.com/solana/pools/{pool['id']}"
+            phantom_url = (
+                f"https://phantom.app/ul/browse/"
+                f"token/{pool['tokenB']}?network=mainnet"
+            )
+            
             message = (
-                "🆕 New Pool Detected!\n\n"
+                "════════════════\n\n"
+                "NEW POOL ═══════\n\n"
+                "════════════════\n\n"
                 f"🏊 Pool: {pool['id']}\n"
                 f"💱 Type: {pool['type']}\n"
                 f"🪙 Pair: {pool['tokenA_symbol']}/{pool['tokenB_symbol']}\n"
@@ -146,16 +156,22 @@ class TokenMonitor:
                 f"📊 24h Volume: ${pool['volume_24h']:,.2f}\n"
                 f"💰 Fee Rate: {pool['fee_rate']*100:.2f}%\n"
                 f"💲 Price: ${pool['price']:.8f}\n\n"
-                f"🔍 Token Addresses:\n"
+                "Tokens ──────────\n"
                 f"• {pool['tokenA_symbol']}: {pool['tokenA']}\n"
                 f"• {pool['tokenB_symbol']}: {pool['tokenB']}\n\n"
-                f"🌐 Pool URL: {pool['url']}"
+                "Links ───────────\n"
+                f"• <a href='{pool['url']}'>Raydium</a>\n"
+                f"• <a href='{dexscreener_url}'>DexScreener</a>\n"
+                f"• <a href='{geckoterminal_url}'>GeckoTerminal</a>\n"
+                f"• <a href='{phantom_url}'>Phantom</a>\n"
+                "\n\n\n\n"
             )
 
             payload = {
                 'chat_id': self.telegram_chat_id,
                 'text': message,
-                'parse_mode': 'HTML'
+                'parse_mode': 'HTML',
+                'disable_web_page_preview': True
             }
 
             response = requests.post(self.telegram_url, json=payload)
@@ -167,7 +183,6 @@ class TokenMonitor:
 
     def monitor_pools(self, time_value, unit='hours', interval=60, config=None):
         """Continuously monitor for new pools"""
-        # Allow temporary config override for this call
         if config:
             temp_config = self.config.copy()
             temp_config.update(config)
